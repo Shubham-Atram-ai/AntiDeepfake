@@ -13,6 +13,7 @@ import logging
 from typing import List, Optional, Tuple
 
 import numpy as np
+# pyrefly: ignore [missing-import]
 from facenet_pytorch import MTCNN
 from PIL import Image
 
