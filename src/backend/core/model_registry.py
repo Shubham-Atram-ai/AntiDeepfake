@@ -15,8 +15,8 @@ Usage::
     registry.load()
 
     # During a request:
-    detector = registry.face_detector
-    attack   = registry.fgsm_attack
+    detector  = registry.face_detector
+    attack    = registry.pgd_attack
 
     # During shutdown (lifespan):
     registry.clear()
@@ -25,8 +25,8 @@ Usage::
 import logging
 from typing import Optional
 
-from src.ml_core.models.mtcnn_detector import FaceDetector
-from src.ml_core.attacks.fgsm_attack import FGSMAttack
+from src.ml_core.models.retinaface_detector import FaceDetector
+from src.ml_core.attacks.pgd_attack import PGDAttack
 from src.backend.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -36,16 +36,16 @@ class ModelRegistry:
     """Singleton container for initialised ML models.
 
     Attributes:
-        face_detector: Loaded ``FaceDetector`` instance, or ``None`` before
-            ``load()`` is called.
-        fgsm_attack: Loaded ``FGSMAttack`` instance, or ``None`` before
+        face_detector: Loaded ``FaceDetector`` (RetinaFace) instance, or
+            ``None`` before ``load()`` is called.
+        pgd_attack: Loaded ``PGDAttack`` instance, or ``None`` before
             ``load()`` is called.
     """
 
     def __init__(self) -> None:
         """Initialise an empty registry (models are not yet loaded)."""
         self.face_detector: Optional[FaceDetector] = None
-        self.fgsm_attack: Optional[FGSMAttack] = None
+        self.pgd_attack: Optional[PGDAttack] = None
 
     def load(self) -> None:
         """Load and cache all ML models.
@@ -58,20 +58,21 @@ class ModelRegistry:
             RuntimeError: If either model fails to initialise (e.g. missing
                 weights, no internet connection for first-time download).
         """
-        logger.info("ModelRegistry — loading FaceDetector (MTCNN) …")
+        logger.info("ModelRegistry — loading FaceDetector (RetinaFace) …")
         self.face_detector = FaceDetector(device="cpu")
         logger.info("ModelRegistry — FaceDetector ready.")
 
         logger.info(
-            "ModelRegistry — loading FGSMAttack (InceptionResnetV1 / VGGFace2) "
-            "with epsilon=%.4f …",
-            settings.default_epsilon,
+            "ModelRegistry — loading PGDAttack (InceptionResnetV1 / VGGFace2) "
+            "with eps=8/255, alpha=2/255, steps=10 …"
         )
-        self.fgsm_attack = FGSMAttack(
-            epsilon=settings.default_epsilon,
+        self.pgd_attack = PGDAttack(
+            eps=8 / 255,
+            alpha=2 / 255,
+            steps=10,
             device="auto",
         )
-        logger.info("ModelRegistry — FGSMAttack ready.")
+        logger.info("ModelRegistry — PGDAttack ready.")
         logger.info("ModelRegistry — all models loaded successfully.")
 
     def clear(self) -> None:
@@ -83,7 +84,7 @@ class ModelRegistry:
         """
         logger.info("ModelRegistry — releasing model references …")
         self.face_detector = None
-        self.fgsm_attack = None
+        self.pgd_attack = None
         logger.info("ModelRegistry — registry cleared.")
 
     @property
@@ -91,10 +92,10 @@ class ModelRegistry:
         """Return ``True`` if both models are loaded and available.
 
         Returns:
-            ``True`` when ``face_detector`` and ``fgsm_attack`` are not
+            ``True`` when ``face_detector`` and ``pgd_attack`` are not
             ``None``; ``False`` otherwise.
         """
-        return self.face_detector is not None and self.fgsm_attack is not None
+        return self.face_detector is not None and self.pgd_attack is not None
 
 
 # Module-level singleton — imported by lifespan handler and route services.

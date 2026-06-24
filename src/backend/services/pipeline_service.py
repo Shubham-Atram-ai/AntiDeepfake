@@ -1,7 +1,7 @@
 """
 pipeline_service.py
 -------------------
-Orchestration layer for the AntiDeepfake FGSM cloaking pipeline.
+Orchestration layer for the AntiDeepfake PGD adversarial cloaking pipeline.
 
 This service is the single authoritative entry point for processing an
 uploaded image end-to-end.  It delegates to the three specialised service
@@ -16,11 +16,11 @@ in-memory — no disk I/O):
           ↓
     BGR → RGB           — OpenCV default is BGR; ML models expect RGB
           ↓
-    detect_face()       — MTCNN → (face_crop, bounding_box)
+    detect_face()       — RetinaFace → (face_crop, bounding_box)
           ↓
     prepare_face_tensor() — resize 160×160, normalise [0,1], CHW tensor
           ↓
-    run_attack()        — FGSMAttack.attack() → adversarial face uint8 RGB
+    run_attack()        — PGDAttack.attack() → adversarial face uint8 RGB
           ↓
     _reconstruct_image() — paste adversarial face back into original canvas
           ↓
@@ -245,16 +245,16 @@ def run_cloaking_pipeline(
     filename: str,
     epsilon: float,
 ) -> Dict[str, Any]:
-    """Execute the full FGSM cloaking pipeline and return a response dict.
+    """Execute the full PGD cloaking pipeline and return a response dict.
 
     This is the single entry point called by the ``/api/v1/cloak`` route
     handler.  All business logic lives here; the route handler is kept thin.
 
     Pipeline sequence:
         1. Decode image bytes → RGB NumPy array.
-        2. Run MTCNN face detection → crop + bounding box.
+        2. Run RetinaFace face detection → crop + bounding box.
         3. Prepare FaceNet tensor from the crop.
-        4. Run FGSM attack → adversarial face RGB array.
+        4. Run PGD attack → adversarial face RGB array.
         5. Reconstruct adversarial face into the original canvas.
         6. Compute SSIM and PSNR.
         7. Encode cloaked image as Base64 JPEG.
@@ -303,8 +303,8 @@ def run_cloaking_pipeline(
     # ── Step 3: Tensor preparation ────────────────────────────────────────────
     face_tensor = prepare_face_tensor(face_crop)
 
-    # ── Step 4: FGSM attack ───────────────────────────────────────────────────
-    adversarial_face_rgb, _ = run_attack(registry.fgsm_attack, face_tensor, epsilon)
+    # ── Step 4: PGD attack ────────────────────────────────────────────────────
+    adversarial_face_rgb, _ = run_attack(registry.pgd_attack, face_tensor, epsilon)
 
     # ── Step 5: Reconstruct cloaked image ─────────────────────────────────────
     cloaked_rgb = _reconstruct_image(original_rgb, adversarial_face_rgb, bounding_box)

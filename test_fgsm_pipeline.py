@@ -1,22 +1,22 @@
 """
-test_fgsm_pipeline.py
----------------------
-End-to-end smoke test for the FGSM adversarial cloaking pipeline.
+test_pgd_pipeline.py  (entry point: test_fgsm_pipeline.py)
+-----------------------------------------------------------
+End-to-end smoke test for the PGD adversarial cloaking pipeline.
 
 Executes the complete workflow from raw image loading to protected image
-output, covering every stage of the Milestone 2 pipeline:
+output, covering every stage of the Phase 2 pipeline:
 
     Original Image
           ↓
-    Image Loader         (src/ml_core/utils/image_loader.py)
+    Image Loader            (src/ml_core/utils/image_loader.py)
           ↓
-    MTCNN Detection      (src/ml_core/models/mtcnn_detector.py)
+    RetinaFace Detection    (src/ml_core/models/retinaface_detector.py)
           ↓
     Face Crop
           ↓
-    FaceNet Embedding    (src/ml_core/attacks/fgsm_attack.py)
+    FaceNet Embedding       (src/ml_core/attacks/pgd_attack.py)
           ↓
-    FGSM Attack          (epsilon = 0.02)
+    PGD Attack              (eps=8/255, alpha=2/255, steps=10)
           ↓
     Adversarial Face
           ↓
@@ -76,8 +76,8 @@ import cv2
 from PIL import Image
 
 from src.ml_core.utils.image_loader import load_image, save_image
-from src.ml_core.models.mtcnn_detector import FaceDetector
-from src.ml_core.attacks.fgsm_attack import FGSMAttack
+from src.ml_core.models.retinaface_detector import FaceDetector
+from src.ml_core.attacks.pgd_attack import PGDAttack
 from src.ml_core.evaluation.metrics import compute_ssim, compute_psnr
 
 # ---------------------------------------------------------------------------
@@ -93,10 +93,13 @@ OUTPUT_PATH: str = os.path.join(
     PROJECT_ROOT, "data", "output", "cloaked_protected.jpg"
 )
 
-# FGSM perturbation budget — 2 % of the normalised [0, 1] pixel range.
-# At this level perturbations are typically imperceptible to humans while
-# meaningfully disrupting automated face-recognition pipelines.
-EPSILON: float = 0.02
+# PGD hyperparameters (standard PGD-8 budget).
+EPS:   float = 8 / 255    # L∞ perturbation budget  (~0.0314)
+ALPHA: float = 2 / 255    # step size per iteration  (~0.0078)
+STEPS: int   = 10         # number of gradient steps
+
+# Alias kept so downstream log messages remain concise.
+EPSILON: float = EPS
 
 # FaceNet native input resolution (InceptionResnetV1 trained at 160 × 160).
 FACENET_INPUT_SIZE: int = 160
@@ -139,7 +142,7 @@ def _load_raw_image() -> np.ndarray:
 def _detect_face(
     image_rgb: np.ndarray,
 ) -> tuple[np.ndarray, list[float]]:
-    """Run MTCNN face detection and extract the primary face crop.
+    """Run RetinaFace detection and extract the primary face crop.
 
     Args:
         image_rgb: Full-resolution RGB uint8 image.
@@ -152,7 +155,7 @@ def _detect_face(
         SystemExit: If no face is detected (exits with code 0) or if
             the detector raises an error (exits with code 1).
     """
-    logger.info("STEP 2 — Initialising MTCNN FaceDetector…")
+    logger.info("STEP 2 — Initialising RetinaFace FaceDetector…")
     detector = FaceDetector(device="cpu")
 
     try:
@@ -218,14 +221,14 @@ def _prepare_face_tensor(face_crop_rgb: np.ndarray) -> torch.Tensor:
     return face_tensor
 
 
-def _run_fgsm(
-    attack: FGSMAttack,
+def _run_pgd(
+    attack: PGDAttack,
     face_tensor: torch.Tensor,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """Generate the baseline embedding and the FGSM adversarial tensor.
+    """Generate the baseline embedding and the PGD adversarial tensor.
 
     Args:
-        attack: Initialised FGSMAttack instance.
+        attack: Initialised PGDAttack instance.
         face_tensor: Float32 tensor (1, 3, 160, 160) in [0.0, 1.0].
 
     Returns:
@@ -239,10 +242,11 @@ def _run_fgsm(
                 tuple(original_embedding.shape))
 
     logger.info(
-        "STEP 5 — Executing FGSM attack (epsilon = %.4f)…", EPSILON
+        "STEP 5 — Executing PGD attack (eps=%.5f, alpha=%.5f, steps=%d)…",
+        EPS, ALPHA, STEPS,
     )
-    adversarial_tensor = attack.attack(face_tensor, epsilon=EPSILON)
-    logger.info("STEP 5 — FGSM attack complete.")
+    adversarial_tensor = attack.attack(face_tensor)
+    logger.info("STEP 5 — PGD attack complete.")
 
     return original_embedding, adversarial_tensor
 
@@ -366,14 +370,14 @@ def _evaluate_and_log(
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    """Execute the complete FGSM adversarial cloaking pipeline.
+    """Execute the complete PGD adversarial cloaking pipeline.
 
     Steps:
         1. Load raw image from data/raw/test.jpg (or test.jpeg).
-        2. Run MTCNN face detection via FaceDetector.
+        2. Run RetinaFace face detection via FaceDetector.
         3. Prepare 160×160 FaceNet-compatible face tensor.
         4. Compute baseline FaceNet embedding.
-        5. Execute FGSM attack (epsilon = 0.02).
+        5. Execute PGD attack (eps=8/255, alpha=2/255, steps=10).
         6. Reconstruct the adversarial face into the original image canvas.
         7. Save the protected image to data/output/cloaked_protected.jpg.
         8. Compute SSIM and PSNR and log the results.
@@ -382,8 +386,8 @@ def main() -> None:
         None.  Exits with code 1 on any unrecoverable error.
     """
     logger.info("=" * 60)
-    logger.info("Anti-Deepfake — FGSM Adversarial Cloaking Pipeline")
-    logger.info("Milestone 2 | epsilon = %.4f", EPSILON)
+    logger.info("Anti-Deepfake — PGD Adversarial Cloaking Pipeline")
+    logger.info("Phase 2 | eps=%.5f | alpha=%.5f | steps=%d", EPS, ALPHA, STEPS)
     logger.info("=" * 60)
 
     # ── Step 1: Load raw image ────────────────────────────────────────────────
@@ -395,18 +399,18 @@ def main() -> None:
     # ── Step 3: Prepare FaceNet-compatible tensor ─────────────────────────────
     face_tensor = _prepare_face_tensor(face_crop_rgb)
 
-    # ── Step 4 & 5: Baseline embedding + FGSM attack ─────────────────────────
-    logger.info("STEP 4/5 — Initialising FGSM attack engine…")
+    # ── Step 4 & 5: Baseline embedding + PGD attack ──────────────────────
+    logger.info("STEP 4/5 — Initialising PGD attack engine…")
     try:
-        attack = FGSMAttack(epsilon=EPSILON, device="auto")
+        attack = PGDAttack(eps=EPS, alpha=ALPHA, steps=STEPS, device="auto")
     except RuntimeError as exc:
-        logger.error("[ERROR] Could not initialise FGSM attack: %s", exc)
+        logger.error("[ERROR] Could not initialise PGD attack: %s", exc)
         sys.exit(1)
 
     try:
-        original_embedding, adversarial_tensor = _run_fgsm(attack, face_tensor)
+        original_embedding, adversarial_tensor = _run_pgd(attack, face_tensor)
     except (ValueError, RuntimeError) as exc:
-        logger.error("[ERROR] FGSM attack failed: %s", exc)
+        logger.error("[ERROR] PGD attack failed: %s", exc)
         sys.exit(1)
 
     # Log embedding distance achieved
@@ -452,9 +456,11 @@ def main() -> None:
 
     # ── Summary ───────────────────────────────────────────────────────────────
     logger.info("=" * 60)
-    logger.info("✓ FGSM Pipeline PASSED")
+    logger.info("✓ PGD Pipeline PASSED")
     logger.info("  ↳ Output      : %s", OUTPUT_PATH)
-    logger.info("  ↳ Epsilon     : %.4f", EPSILON)
+    logger.info("  ↳ Eps         : %.5f  (8/255)", EPS)
+    logger.info("  ↳ Alpha       : %.5f  (2/255)", ALPHA)
+    logger.info("  ↳ Steps       : %d", STEPS)
     logger.info("  ↳ SSIM        : %.6f", ssim_score)
     logger.info("  ↳ PSNR        : %.4f dB", psnr_db)
     logger.info(

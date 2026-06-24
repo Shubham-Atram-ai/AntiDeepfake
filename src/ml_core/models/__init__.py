@@ -9,6 +9,6 @@ package:
     from src.ml_core.models import FaceDetector
 """
 
-from src.ml_core.models.mtcnn_detector import FaceDetector
+from src.ml_core.models.retinaface_detector import FaceDetector
 
 __all__ = ["FaceDetector"]

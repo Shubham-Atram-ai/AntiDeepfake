@@ -35,6 +35,7 @@ References:
 
 
 import logging
+from typing import Optional
 
 import numpy as np
 import torch
@@ -214,7 +215,7 @@ class FGSMAttack:
     def attack(
         self,
         face_tensor: torch.Tensor,
-        epsilon: float | None = None,
+        epsilon: Optional[float] = None,
     ) -> torch.Tensor:
         """Generate an FGSM adversarial perturbation in embedding space.
 
