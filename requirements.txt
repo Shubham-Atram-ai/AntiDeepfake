@@ -4,7 +4,9 @@ opencv-python
 facenet-pytorch
 numpy
 Pillow
-adversarial-robustness-toolbox
+retina-face
+tf-keras
+torchattacks
 scikit-image
 pytest
 

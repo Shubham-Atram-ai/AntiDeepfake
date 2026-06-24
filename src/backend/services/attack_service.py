@@ -1,7 +1,7 @@
 """
 attack_service.py
 -----------------
-Service adapter for the FGSM adversarial attack.
+Service adapter for the PGD adversarial attack.
 
 Encapsulates the tensor preparation and attack orchestration logic adapted
 directly from ``test_fgsm_pipeline.py`` — specifically the private helpers
@@ -12,7 +12,7 @@ No ML logic is duplicated here.  The module provides:
 1. ``prepare_face_tensor()``  — converts a uint8 RGB crop to a FaceNet-ready
    float32 tensor (adapted from ``test_fgsm_pipeline._prepare_face_tensor``).
 2. ``tensor_to_uint8_rgb()``  — reverses the above (from ``_tensor_to_uint8_rgb``).
-3. ``run_attack()``           — calls ``FGSMAttack.attack()`` via the registry.
+3. ``run_attack()``           — calls ``PGDAttack.attack()`` via the registry.
 """
 
 import logging
@@ -23,7 +23,7 @@ import torch
 from fastapi import HTTPException, status
 from PIL import Image
 
-from src.ml_core.attacks.fgsm_attack import FGSMAttack
+from src.ml_core.attacks.pgd_attack import PGDAttack
 
 logger = logging.getLogger(__name__)
 
@@ -105,17 +105,17 @@ def tensor_to_uint8_rgb(tensor: torch.Tensor) -> np.ndarray:
 
 
 def run_attack(
-    attack: FGSMAttack,
+    attack: PGDAttack,
     face_tensor: torch.Tensor,
     epsilon: float,
 ) -> Tuple[np.ndarray, torch.Tensor]:
-    """Execute the FGSM attack and return the adversarial face as uint8 RGB.
+    """Execute the PGD attack and return the adversarial face as uint8 RGB.
 
-    Calls ``FGSMAttack.attack()`` and immediately converts the adversarial
+    Calls ``PGDAttack.attack()`` and immediately converts the adversarial
     tensor to a uint8 RGB NumPy array suitable for image reconstruction.
 
     Args:
-        attack: Initialised ``FGSMAttack`` instance from the model registry.
+        attack: Initialised ``PGDAttack`` instance from the model registry.
         face_tensor: Float32 tensor of shape ``(1, 3, 160, 160)`` in
             ``[0.0, 1.0]`` — output of ``prepare_face_tensor()``.
         epsilon: FGSM L-infinity perturbation budget.  Overrides the
@@ -129,21 +129,21 @@ def run_attack(
           retained for possible downstream use (e.g. embedding comparison).
 
     Raises:
-        HTTPException(500, PROCESSING_ERROR): If the FGSM backward pass
+        HTTPException(500, PROCESSING_ERROR): If the PGD attack
             fails due to a broken computation graph.
     """
-    logger.info("attack_service — executing FGSM attack | epsilon=%.4f", epsilon)
+    logger.info("attack_service — executing PGD attack | epsilon=%.4f", epsilon)
 
     try:
         adversarial_tensor = attack.attack(face_tensor, epsilon=epsilon)
     except (ValueError, RuntimeError) as exc:
-        logger.error("attack_service — FGSM attack failed: %s", exc)
+        logger.error("attack_service — PGD attack failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "success": False,
                 "error_code": "PROCESSING_ERROR",
-                "error": "FGSM attack failed during adversarial perturbation.",
+                "error": "PGD attack failed during adversarial perturbation.",
             },
         ) from exc
 
