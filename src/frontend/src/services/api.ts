@@ -106,10 +106,10 @@ export async function checkHealth(): Promise<HealthResult> {
  *
  * Sends the request as multipart/form-data with:
  *   - file: the uploaded image
- *   - epsilon: the FGSM perturbation budget
+ *   - epsilon: the PGD perturbation budget
  *
  * @param file    - The image File to cloak.
- * @param epsilon - FGSM perturbation strength in (0.0, 1.0].
+ * @param epsilon - PGD perturbation strength in (0.0, 1.0].
  * @returns       A CloakResult discriminated union (ok/error).
  */
 export async function cloakImage(

@@ -18,8 +18,8 @@ class HealthResponse(BaseModel):
     Attributes:
         status: Overall API health.  ``"healthy"`` when all models are loaded.
         version: Semantic version string of the running API.
-        face_detector_loaded: ``True`` when MTCNN is ready.
-        fgsm_engine_loaded: ``True`` when InceptionResnetV1 is ready.
+        face_detector_loaded: ``True`` when RetinaFace is ready.
+        pgd_engine_loaded: ``True`` when ResNet50 is ready.
     """
 
     status: str = Field(
@@ -34,11 +34,11 @@ class HealthResponse(BaseModel):
     )
     face_detector_loaded: bool = Field(
         ...,
-        description="Whether the MTCNN face detector is loaded and ready.",
+        description="Whether the RetinaFace face detector is loaded and ready.",
     )
-    fgsm_engine_loaded: bool = Field(
+    pgd_engine_loaded: bool = Field(
         ...,
-        description="Whether the FGSM InceptionResnetV1 engine is loaded and ready.",
+        description="Whether the PGD ResNet50 engine is loaded and ready.",
     )
 
     model_config = {"json_schema_extra": {
@@ -46,7 +46,7 @@ class HealthResponse(BaseModel):
             "status": "healthy",
             "version": "1.0.0",
             "face_detector_loaded": True,
-            "fgsm_engine_loaded": True,
+            "pgd_engine_loaded": True,
         }]
     }}
 

@@ -18,3 +18,12 @@ data/raw/*
 Thumbs.db
 
 AntiDeepfake_backup.bundle
+
+# Generated and logs
+*.log
+response.json
+codebase_context.md
+
+# Frontend Dependencies & Builds
+**/node_modules/
+**/dist/

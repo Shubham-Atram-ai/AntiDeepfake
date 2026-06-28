@@ -54,7 +54,7 @@ const Navbar: React.FC = () => {
                 Anti<span className="text-cyber-500">Deepfake</span>
               </span>
               <p className="text-xs text-gray-500 font-mono hidden sm:block">
-                v1.0 — FGSM Adversarial Cloaking
+                v1.0 — PGD Adversarial Cloaking
               </p>
             </div>
           </div>

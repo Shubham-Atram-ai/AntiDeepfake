@@ -123,7 +123,7 @@ const Home: React.FC = () => {
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyber-700/40 bg-cyber-950/40 text-xs font-mono text-cyber-400 mb-6 animate-fade-in"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-cyber-400 animate-pulse" />
-            FGSM Adversarial Cloaking · MTCNN Face Detection
+            PGD Adversarial Cloaking · RetinaFace Face Detection
           </div>
 
           {/* Headline */}
@@ -146,7 +146,7 @@ const Home: React.FC = () => {
             className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed mb-8 animate-slide-up"
             style={{ animationDelay: '0.1s' }}
           >
-            Upload a facial image to apply an imperceptible FGSM adversarial
+            Upload a facial image to apply an imperceptible PGD adversarial
             perturbation that disrupts AI face-recognition systems — while
             remaining completely natural to the human eye.
           </p>
@@ -325,7 +325,7 @@ const Home: React.FC = () => {
         className="border-t border-surface-border py-8 px-4 text-center"
       >
         <p className="text-xs text-gray-600 font-mono">
-          AntiDeepfake v1.0 · FGSM Adversarial Cloaking · MTCNN Face Detection
+          AntiDeepfake v1.0 · PGD Adversarial Cloaking · RetinaFace Face Detection
         </p>
         <p className="text-xs text-gray-700 mt-1">
           For research and privacy protection purposes only.

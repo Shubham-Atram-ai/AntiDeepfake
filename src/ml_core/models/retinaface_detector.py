@@ -43,6 +43,7 @@ import logging
 from typing import List, Optional, Tuple
 
 import numpy as np
+# pyrefly: ignore [missing-import]
 from retinaface import RetinaFace
 from PIL import Image
 

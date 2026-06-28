@@ -34,9 +34,9 @@ router = APIRouter(
     "",
     response_model=CloakResponse,
     status_code=status.HTTP_200_OK,
-    summary="Apply FGSM adversarial cloaking to a face image",
+    summary="Apply PGD adversarial cloaking to a face image",
     description=(
-        "Upload a face image to apply an FGSM adversarial perturbation that "
+        "Upload a face image to apply an PGD adversarial perturbation that "
         "confuses automated face-recognition systems while remaining "
         "visually imperceptible to humans.  "
         "Returns the cloaked image as a Base64-encoded JPEG along with "
@@ -84,7 +84,7 @@ router = APIRouter(
                     "example": {
                         "success": False,
                         "error_code": "PROCESSING_ERROR",
-                        "error": "FGSM attack failed during adversarial perturbation.",
+                        "error": "PGD attack failed during adversarial perturbation.",
                     }
                 }
             },
@@ -101,12 +101,12 @@ async def cloak_image(
         gt=0.0,
         le=1.0,
         description=(
-            "FGSM L-infinity perturbation budget in (0.0, 1.0]. "
+            "PGD L-infinity perturbation budget in (0.0, 1.0]. "
             f"Defaults to {settings.default_epsilon} when not provided."
         ),
     ),
 ) -> JSONResponse:
-    """Apply FGSM adversarial cloaking to the uploaded face image.
+    """Apply PGD adversarial cloaking to the uploaded face image.
 
     **Workflow**:
     1. Validate content type (JPEG / PNG / BMP / WebP).
@@ -125,7 +125,7 @@ async def cloak_image(
 
     Args:
         file: Uploaded image file (multipart/form-data).
-        epsilon: Optional FGSM perturbation strength override.
+        epsilon: Optional PGD perturbation strength override.
 
     Returns:
         ``JSONResponse`` with ``CloakResponse`` body on success, or an

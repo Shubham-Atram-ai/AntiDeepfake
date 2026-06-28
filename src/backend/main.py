@@ -20,6 +20,19 @@ ReDoc:
     http://127.0.0.1:8000/redoc
 """
 
+import os
+
+# ---------------------------------------------------------------------------
+# Strict enforcement of thread pool isolation to prevent TF/PyTorch segfaults
+# ---------------------------------------------------------------------------
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+
+# Import torch first to prevent segmentation faults caused by library import conflicts on some systems (e.g. Kali)
+import torch
+import torchvision
+
 import logging
 import sys
 from contextlib import asynccontextmanager
@@ -57,7 +70,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     **Startup**:
         1. Call ``registry.load()`` which initialises ``FaceDetector`` and
-           ``FGSMAttack``.  Both models are cached in the module-level
+           ``PGDAttack``.  Both models are cached in the module-level
            ``registry`` singleton and reused across all requests.
         2. If either model fails to load (e.g. missing weights), the
            application exits immediately — a partially-initialised backend
@@ -180,7 +193,7 @@ async def root() -> JSONResponse:
     summary="API health check",
     description=(
         "Returns the current health status of the API and indicates whether "
-        "both ML models (MTCNN face detector and FGSM engine) are loaded and ready."
+        "both ML models (RetinaFace face detector and PGD engine) are loaded and ready."
     ),
     responses={
         200: {"description": "API is healthy and all models are loaded."},
@@ -195,11 +208,11 @@ async def health() -> JSONResponse:
         - ``status``: ``"healthy"`` or ``"degraded"``
         - ``version``: API version string
         - ``face_detector_loaded``: ``true`` / ``false``
-        - ``fgsm_engine_loaded``: ``true`` / ``false``
+        - ``pgd_engine_loaded``: ``true`` / ``false``
     """
     face_loaded = registry.face_detector is not None
-    fgsm_loaded = registry.fgsm_attack is not None
-    overall = "healthy" if (face_loaded and fgsm_loaded) else "degraded"
+    pgd_loaded = registry.pgd_attack is not None
+    overall = "healthy" if (face_loaded and pgd_loaded) else "degraded"
 
     http_status = (
         status.HTTP_200_OK if overall == "healthy"
@@ -212,7 +225,7 @@ async def health() -> JSONResponse:
             "status": overall,
             "version": settings.app_version,
             "face_detector_loaded": face_loaded,
-            "fgsm_engine_loaded": fgsm_loaded,
+            "pgd_engine_loaded": pgd_loaded,
         },
     )
 

@@ -66,10 +66,10 @@ export interface HealthResponse {
   status: 'healthy' | 'degraded' | string;
   /** Semantic version string of the running API. */
   version: string;
-  /** True when MTCNN face detector is ready. */
+  /** True when RetinaFace face detector is ready. */
   face_detector_loaded: boolean;
-  /** True when InceptionResnetV1 FGSM engine is ready. */
-  fgsm_engine_loaded: boolean;
+  /** True when PGD ResNet50 engine is ready. */
+  pgd_engine_loaded: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -89,7 +89,7 @@ export interface AppState {
   file: File | null;
   /** Object URL for the original image preview. */
   previewUrl: string | null;
-  /** FGSM perturbation budget (0.01 – 0.10). */
+  /** PGD perturbation budget (0.01 – 0.10). */
   epsilon: number;
   /** True while the API request is in-flight. */
   loading: boolean;

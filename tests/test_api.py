@@ -169,15 +169,15 @@ class TestHealthEndpoint:
         response = client.get("/health")
         body = response.json()
         assert body.get("face_detector_loaded") is True, (
-            "face_detector_loaded is False — MTCNN did not load."
+            "face_detector_loaded is False — RetinaFace did not load."
         )
 
-    def test_health_fgsm_engine_loaded(self, client: TestClient) -> None:
-        """fgsm_engine_loaded must be True after successful startup."""
+    def test_health_pgd_engine_loaded(self, client: TestClient) -> None:
+        """pgd_engine_loaded must be True after successful startup."""
         response = client.get("/health")
         body = response.json()
-        assert body.get("fgsm_engine_loaded") is True, (
-            "fgsm_engine_loaded is False — InceptionResnetV1 did not load."
+        assert body.get("pgd_engine_loaded") is True, (
+            "pgd_engine_loaded is False — ResNet50 did not load."
         )
 
     def test_health_version_present(self, client: TestClient) -> None:
@@ -250,6 +250,15 @@ class TestSuccessfulCloak:
             files={"file": ("test.jpg", image_bytes, "image/jpeg")},
         )
         assert response.status_code == 200
+
+        data = response.json()
+        import base64 as b64
+        import os as local_os
+        local_os.makedirs("data/output", exist_ok=True)
+        with open("data/output/cloaked_protected.jpg", "wb") as f:
+            f.write(b64.b64decode(data["cloaked_image_base64"]))
+        with open("data/output/metrics.txt", "w") as f:
+            f.write(str(data["metrics"]))
         body = response.json()
 
         assert body.get("success") is True, "success field must be True."

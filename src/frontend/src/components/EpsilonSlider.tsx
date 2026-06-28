@@ -1,5 +1,5 @@
 /**
- * EpsilonSlider.tsx — FGSM perturbation strength control.
+ * EpsilonSlider.tsx — PGD perturbation strength control.
  *
  * Range:   0.01 → 0.10
  * Step:    0.01
@@ -68,7 +68,7 @@ const EpsilonSlider: React.FC<EpsilonSliderProps> = ({ value, onChange, disabled
             Perturbation Strength (ε)
           </label>
           <p className="text-xs text-gray-500 mt-0.5">
-            Controls the FGSM L-infinity perturbation budget
+            Controls the PGD L-infinity perturbation budget
           </p>
         </div>
         <div className="text-right">

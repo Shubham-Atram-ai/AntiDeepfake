@@ -26,7 +26,7 @@ class Settings(BaseSettings):
         host: Network interface the uvicorn server binds to.
         port: TCP port the server listens on.
         log_level: Logging level string (debug / info / warning / error).
-        default_epsilon: Default FGSM perturbation budget used when the
+        default_epsilon: Default PGD perturbation budget used when the
             caller does not supply an ``epsilon`` value.
         app_title: Human-readable title shown in the Swagger UI.
         app_version: SemVer version string shown in the Swagger UI.
@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     app_title: str = "AntiDeepfake API"
     app_version: str = "1.0.0"
     app_description: str = (
-        "Adversarial Image Cloaking API — applies FGSM perturbations to "
+        "Adversarial Image Cloaking API — applies PGD perturbations to "
         "protect facial images from automated face-recognition systems."
     )
 

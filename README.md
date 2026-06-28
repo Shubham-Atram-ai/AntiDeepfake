@@ -63,7 +63,7 @@ Defending against AI-driven privacy threats requires a proactive, cryptographic-
 
 ### Key Features
 * **Imperceptible Protection**: Applies targeted adversarial noise that disrupts ML models without degrading visual quality.
-* **End-to-End ML Pipeline**: Seamlessly integrates PyTorch face detection, FGSM adversarial attack generation, and image reconstruction.
+* **End-to-End ML Pipeline**: Seamlessly integrates PyTorch face detection, PGD adversarial attack generation, and image reconstruction.
 * **Full-Stack Application**: Robust Python/FastAPI backend, React/Vite web interface, and a highly decoupled ML core.
 * **Privacy by Design**: API processes all image tensors strictly in memory. Zero-retention policy for uploaded data.
 
@@ -79,8 +79,8 @@ graph TD
     UI -->|POST /api/v1/cloak| API[FastAPI Backend]
     
     subgraph ML Processing Pipeline
-        API -->|PIL Image| Detector[MTCNN Face Detector]
-        Detector -->|Face Tensors| Attacker[FGSM Adversarial Attacker]
+        API -->|PIL Image| Detector[RetinaFace Face Detector]
+        Detector -->|Face Tensors| Attacker[PGD Adversarial Attacker]
         Attacker -->|Adversarial Noise| Recon[Image Reconstruction]
     end
     
@@ -115,11 +115,11 @@ A key ongoing objective is to evaluate the **transferability** and **robustness*
 ```text
 Input Image
    ↓
-Face Detection (MTCNN)
+Face Detection (RetinaFace)
    ↓
 Face Region Extraction
    ↓
-FGSM Perturbation Generation
+PGD Perturbation Generation
    ↓
 Image Reconstruction
    ↓
@@ -127,9 +127,9 @@ Cloaked Image Output
 ```
 
 1. **Input Image**: The system accepts a standard digital image from the user.
-2. **Face Detection (MTCNN)**: The Multi-task Cascaded Convolutional Networks (MTCNN) architecture scans the input to identify bounding boxes representing human faces.
+2. **Face Detection (RetinaFace)**: The RetinaFace architecture scans the input to identify bounding boxes representing human faces.
 3. **Face Region Extraction**: The identified bounding box coordinates are used to isolate the facial tensor regions from the rest of the image.
-4. **FGSM Perturbation Generation**: For the detected faces, the system calculates the gradient of the loss function with respect to the input pixels. The Fast Gradient Sign Method (FGSM) applies the sign of these gradients to compute a minimal, targeted perturbation ($\epsilon$) that maximizes the loss function of the target detection model.
+4. **PGD Perturbation Generation**: For the detected faces, the system calculates gradients through iterative Projected Gradient Descent (PGD) to compute a minimal, targeted perturbation ($\epsilon$) that maximizes the loss function.
 5. **Image Reconstruction**: The generated adversarial noise is carefully blended back into the original image space.
 6. **Cloaked Image Output**: The system outputs a reconstructed image that appears visually unchanged to humans but fundamentally disrupts facial detection architectures.
 
@@ -250,8 +250,8 @@ These phases represent research milestones in a strict **Research Evolution Mode
 
 | Version | Status | Face Detection Target | Adversarial Attack Strategy |
 |---------|--------|----------------------|-----------------------------|
-| **v1.0** | ✅ Completed | MTCNN | FGSM (Fast Gradient Sign Method) |
-| **v2.0** | 🚧 Planned | RetinaFace | PGD (Projected Gradient Descent) |
+| **v1.0** | 🕰️ Legacy | MTCNN | FGSM (Fast Gradient Sign Method) |
+| **v2.0** | ✅ Active | RetinaFace | PGD (Projected Gradient Descent) |
 | **v3.0** | 🚧 Planned | ResNet-Based Detector | DeepFool / Carlini-Wagner |
 | **v4.0** | 🚧 Planned | InsightFace | Universal Adversarial Perturbations |
 
@@ -277,12 +277,12 @@ These phases represent research milestones in a strict **Research Evolution Mode
 
 ## 🟢 Current Release Status
 
-Version 1.0 represents the first complete implementation of the Adversarial Image Cloaking framework using MTCNN and FGSM.
+Version 2.0 represents the current active implementation of the Adversarial Image Cloaking framework using RetinaFace and PGD.
 
 | Component | Technology | Status |
 |-----------|------------|--------|
-| Face Detection | MTCNN | ✅ Implemented |
-| Attack Method | FGSM | ✅ Implemented |
+| Face Detection | RetinaFace | ✅ Implemented |
+| Attack Method | PGD | ✅ Implemented |
 | Backend | FastAPI (Python) | ✅ Implemented |
 | Frontend | React (Vite) | ✅ Implemented |
 | ML Framework | PyTorch | ✅ Implemented |

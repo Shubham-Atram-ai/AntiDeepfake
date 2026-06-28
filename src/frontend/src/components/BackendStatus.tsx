@@ -23,7 +23,7 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ status, healthData }) => 
       textColor: 'text-emerald-400',
       label: 'Backend Online',
       description: healthData
-        ? `API v${healthData.version} · MTCNN ${healthData.face_detector_loaded ? '✓' : '✗'} · FGSM Engine ${healthData.fgsm_engine_loaded ? '✓' : '✗'}`
+        ? `API v${healthData.version} · RetinaFace ${healthData.face_detector_loaded ? '✓' : '✗'} · PGD Engine ${healthData.pgd_engine_loaded ? '✓' : '✗'}`
         : 'All systems operational',
     },
     degraded: {

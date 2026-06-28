@@ -263,7 +263,7 @@ def run_cloaking_pipeline(
     Args:
         image_bytes: Raw bytes of the uploaded image file.
         filename: Original filename for logging (not used for disk I/O).
-        epsilon: FGSM perturbation budget for this request.
+        epsilon: PGD perturbation budget for this request.
 
     Returns:
         A dictionary matching the ``CloakResponse`` schema:

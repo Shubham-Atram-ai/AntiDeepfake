@@ -20,7 +20,7 @@ class CloakRequest(BaseModel):
         optional numeric parameters.
 
     Attributes:
-        epsilon: FGSM L-infinity perturbation budget.  Controls how much each
+        epsilon: PGD L-infinity perturbation budget.  Controls how much each
             pixel is allowed to change.  Must be in the range ``(0.0, 1.0]``.
             Lower values → more subtle changes, potentially less effective
             cloaking.  Higher values → stronger cloaking but visible noise.
@@ -32,7 +32,7 @@ class CloakRequest(BaseModel):
         gt=0.0,
         le=1.0,
         description=(
-            "FGSM L-infinity perturbation budget in [0.0, 1.0]. "
+            "PGD L-infinity perturbation budget in [0.0, 1.0]. "
             "Controls per-pixel change magnitude. Default: 0.02."
         ),
         examples=[0.02, 0.05, 0.1],

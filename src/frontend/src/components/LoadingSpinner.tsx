@@ -40,7 +40,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
       <div className="text-center">
         <p className="text-cyber-400 font-semibold text-sm">{message}</p>
         <p className="text-gray-500 text-xs mt-1 font-mono">
-          FGSM adversarial perturbation in progress…
+          PGD adversarial perturbation in progress…
         </p>
       </div>
 
