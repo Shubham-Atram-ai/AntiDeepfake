@@ -44,6 +44,7 @@ from src.backend.core.model_registry import registry
 from src.backend.services.detector_service import detect_face
 from src.backend.services.attack_service import prepare_face_tensor, run_attack
 from src.backend.services.metrics_service import evaluate_metrics
+from src.ml_core.evaluation.metrics import compute_cosine_similarity, compute_detection_probability
 
 logger = logging.getLogger(__name__)
 
@@ -267,7 +268,8 @@ def run_cloaking_pipeline(
 
     Returns:
         A dictionary matching the ``CloakResponse`` schema:
-        ``{success, processing_time_ms, metrics: {ssim, psnr}, cloaked_image_base64}``.
+        ``{success, processing_time_ms, metrics: {ssim, psnr, cosine_similarity,
+        detection_probability}, cloaked_image_base64}``.
 
     Raises:
         HTTPException: Forwarded from any service layer call (400 or 500).
@@ -303,14 +305,24 @@ def run_cloaking_pipeline(
     # ── Step 3: Tensor preparation ────────────────────────────────────────────
     face_tensor = prepare_face_tensor(face_crop)
 
+    # ── Step 3b: Capture original embedding (before attack) ───────────────────
+    embedding_original = registry.pgd_attack.get_embedding(face_tensor)
+
     # ── Step 4: PGD attack ────────────────────────────────────────────────────
-    adversarial_face_rgb, _ = run_attack(registry.pgd_attack, face_tensor, epsilon)
+    adversarial_face_rgb, adversarial_tensor = run_attack(registry.pgd_attack, face_tensor, epsilon)
+
+    # ── Step 4b: Capture adversarial embedding (after attack) ─────────────────
+    embedding_adversarial = registry.pgd_attack.get_embedding(adversarial_tensor)
 
     # ── Step 5: Reconstruct cloaked image ─────────────────────────────────────
     cloaked_rgb = _reconstruct_image(original_rgb, adversarial_face_rgb, bounding_box)
 
     # ── Step 6: Compute image quality metrics ─────────────────────────────────
     ssim_score, psnr_db = evaluate_metrics(original_rgb, cloaked_rgb)
+
+    # ── Step 6b: Compute embedding-space protection metrics ───────────────────
+    cosine_sim = compute_cosine_similarity(embedding_original, embedding_adversarial)
+    detection_prob = compute_detection_probability(cosine_sim)
 
     # ── Step 7: Encode cloaked image to Base64 ────────────────────────────────
     cloaked_b64 = _encode_image_base64(cloaked_rgb)
@@ -320,9 +332,11 @@ def run_cloaking_pipeline(
 
     logger.info(
         "pipeline_service — pipeline complete. "
-        "SSIM=%.4f | PSNR=%s dB | Time=%.1f ms",
+        "SSIM=%.4f | PSNR=%s dB | CosineSim=%.4f | DetectionProb=%.1f%% | Time=%.1f ms",
         ssim_score,
         f"{psnr_db:.4f}" if psnr_db is not None else "inf",
+        cosine_sim,
+        detection_prob,
         elapsed_ms,
     )
 
@@ -332,6 +346,8 @@ def run_cloaking_pipeline(
         "metrics": {
             "ssim": round(ssim_score, 6),
             "psnr": round(psnr_db, 4) if psnr_db is not None else None,
+            "cosine_similarity": round(cosine_sim, 6),
+            "detection_probability": detection_prob,
         },
         "cloaked_image_base64": cloaked_b64,
     }

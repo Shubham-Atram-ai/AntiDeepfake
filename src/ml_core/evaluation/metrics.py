@@ -3,9 +3,8 @@ metrics.py
 ----------
 Image quality evaluation metrics for adversarial perturbation analysis.
 
-Provides two standard metrics used to quantify the perceptual and
-signal-level differences between an original image and its adversarially
-perturbed counterpart:
+Provides metrics used to quantify perceptual differences and embedding-space
+divergence between an original image and its adversarially perturbed counterpart:
 
 * **SSIM** (Structural Similarity Index Measure): Perceptually motivated
   metric that compares luminance, contrast, and structure between two images.
@@ -15,15 +14,26 @@ perturbed counterpart:
   decibels.  Higher values indicate less distortion; a value of ``inf``
   indicates perfectly identical images.
 
-Both functions operate on RGB uint8 arrays (shape ``(H, W, 3)``) as produced
-by the project's ``image_loader.load_image()`` utility.
+* **Cosine Similarity**: Measures the angular distance between the original
+  and adversarial face embeddings in FaceNet's 512-d space.  A value near
+  1.0 means the embeddings are nearly identical (poor protection); near 0.0
+  or negative means the identities have diverged (strong protection).
+
+* **Detection Probability**: Derived from cosine similarity — an estimate of
+  the likelihood that an AI face-recognition system will still correctly
+  identify the cloaked face.  0 % = fully protected; 100 % = unprotected.
+
+Both image functions operate on RGB uint8 arrays (shape ``(H, W, 3)``) as
+produced by the project's ``image_loader.load_image()`` utility.
 """
 
 import logging
 import math
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
+import torch
+import torch.nn.functional as F
 from skimage.metrics import structural_similarity as _ssim
 from skimage.metrics import peak_signal_noise_ratio as _psnr
 
@@ -207,3 +217,78 @@ def compute_psnr(
         mse,
     )
     return psnr_value
+
+
+# ---------------------------------------------------------------------------
+# Embedding-space protection metrics
+# ---------------------------------------------------------------------------
+
+def compute_cosine_similarity(
+    embedding_original: torch.Tensor,
+    embedding_adversarial: torch.Tensor,
+) -> float:
+    """Compute the cosine similarity between two FaceNet face embeddings.
+
+    Cosine similarity measures the angular closeness of two vectors in
+    embedding space.  For face verification:
+
+    * ``1.0``  — embeddings are identical (no protection — same identity).
+    * ``0.0``  — embeddings are orthogonal (moderate protection).
+    * ``< 0``  — embeddings point in opposite directions (strong protection).
+
+    Args:
+        embedding_original: FaceNet embedding of the original face.
+            Shape ``(1, 512)`` or ``(512,)`` — will be flattened.
+        embedding_adversarial: FaceNet embedding of the adversarially
+            perturbed face.  Must have the same number of elements.
+
+    Returns:
+        Cosine similarity as a float in ``[-1.0, 1.0]``.
+
+    Example:
+        >>> cos_sim = compute_cosine_similarity(emb_orig, emb_adv)
+        >>> print(f"Cosine Similarity: {cos_sim:.4f}")
+    """
+    e1 = embedding_original.detach().flatten().unsqueeze(0).float()
+    e2 = embedding_adversarial.detach().flatten().unsqueeze(0).float()
+    cos_sim = float(F.cosine_similarity(e1, e2).item())
+    logger.info(
+        "Cosine similarity computed: %.6f  "
+        "(1.0 = identical identity; ≤ 0.5 = strong protection)",
+        cos_sim,
+    )
+    return cos_sim
+
+
+def compute_detection_probability(cosine_similarity: float) -> float:
+    """Estimate the probability (0–100 %) that an AI will still detect the identity.
+
+    Maps cosine similarity to a human-readable detection probability using a
+    linear clamp on the range ``[0.0, 1.0]``:
+
+    * ``cosine_similarity >= 1.0``  → 100 % (completely unprotected)
+    * ``cosine_similarity <= 0.0``  → 0 %  (fully protected)
+    * Values in between are scaled linearly.
+
+    This intentionally uses a simple, interpretable mapping rather than a
+    learned threshold so that the probability is directly tied to the
+    geometric divergence of the embeddings.
+
+    Args:
+        cosine_similarity: Float in ``[-1.0, 1.0]`` from
+            ``compute_cosine_similarity()``.
+
+    Returns:
+        Detection probability as a percentage float in ``[0.0, 100.0]``.
+
+    Example:
+        >>> prob = compute_detection_probability(0.2)
+        >>> print(f"Detection probability: {prob:.1f}%")
+    """
+    prob = float(np.clip(cosine_similarity, 0.0, 1.0)) * 100.0
+    logger.info(
+        "Detection probability: %.2f%%  "
+        "(0%% = fully protected; 100%% = AI can still identify the face)",
+        prob,
+    )
+    return round(prob, 2)

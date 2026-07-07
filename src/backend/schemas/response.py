@@ -52,7 +52,7 @@ class HealthResponse(BaseModel):
 
 
 class MetricsResponse(BaseModel):
-    """Nested image-quality metrics returned inside ``CloakResponse``.
+    """Nested image-quality and protection metrics returned inside ``CloakResponse``.
 
     Attributes:
         ssim: Structural Similarity Index in ``[-1.0, 1.0]``.  Values ≥ 0.90
@@ -60,6 +60,14 @@ class MetricsResponse(BaseModel):
         psnr: Peak Signal-to-Noise Ratio in decibels.  Values > 40 dB are
             practically indistinguishable from the original; ``null`` is
             returned for identical images (infinite PSNR).
+        cosine_similarity: Cosine similarity between the original and
+            adversarial FaceNet embeddings in ``[-1.0, 1.0]``.  Values near
+            1.0 indicate the face identity is unchanged (weak protection);
+            values near 0.0 or below indicate strong embedding divergence
+            (strong protection).
+        detection_probability: Estimated probability (0–100 %) that an AI
+            face-recognition system will still correctly identify the cloaked
+            face.  Derived linearly from ``cosine_similarity``.
     """
 
     ssim: float = Field(
@@ -72,9 +80,30 @@ class MetricsResponse(BaseModel):
         description="PSNR in dB. > 40 dB ≈ imperceptible. null for identical images (inf).",
         examples=[36.14],
     )
+    cosine_similarity: float = Field(
+        ...,
+        description=(
+            "Cosine similarity between original and adversarial FaceNet embeddings. "
+            "Range [-1.0, 1.0]. Near 1.0 = same identity (weak protection); ≤ 0.5 = strong protection."
+        ),
+        examples=[0.1823],
+    )
+    detection_probability: float = Field(
+        ...,
+        description=(
+            "Estimated probability (0–100 %) that AI will still identify the face. "
+            "0 % = fully protected; 100 % = unprotected."
+        ),
+        examples=[18.23],
+    )
 
     model_config = {"json_schema_extra": {
-        "examples": [{"ssim": 0.9412, "psnr": 36.14}]
+        "examples": [{
+            "ssim": 0.9412,
+            "psnr": 36.14,
+            "cosine_similarity": 0.1823,
+            "detection_probability": 18.23,
+        }]
     }}
 
 
@@ -85,7 +114,8 @@ class CloakResponse(BaseModel):
         success: Always ``True`` on a successful cloaking request.
         processing_time_ms: Wall-clock processing time in milliseconds,
             covering decode → detect → attack → reconstruct → encode.
-        metrics: Nested ``MetricsResponse`` with SSIM and PSNR scores.
+        metrics: Nested ``MetricsResponse`` with SSIM, PSNR, cosine similarity,
+            and detection probability.
         cloaked_image_base64: The cloaked full-resolution image encoded as a
             Base64 string (JPEG format).  Decode with ``base64.b64decode()``.
     """
@@ -101,7 +131,7 @@ class CloakResponse(BaseModel):
     )
     metrics: MetricsResponse = Field(
         ...,
-        description="Image quality metrics comparing original vs cloaked image.",
+        description="Image quality and protection metrics comparing original vs cloaked image.",
     )
     cloaked_image_base64: str = Field(
         ...,
@@ -115,7 +145,12 @@ class CloakResponse(BaseModel):
         "examples": [{
             "success": True,
             "processing_time_ms": 742.1,
-            "metrics": {"ssim": 0.9412, "psnr": 36.14},
+            "metrics": {
+                "ssim": 0.9412,
+                "psnr": 36.14,
+                "cosine_similarity": 0.1823,
+                "detection_probability": 18.23,
+            },
             "cloaked_image_base64": "<base64-encoded-jpeg>",
         }]
     }}

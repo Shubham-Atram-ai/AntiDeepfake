@@ -22,6 +22,16 @@ export interface Metrics {
    * `null` is returned for identical images (infinite PSNR).
    */
   psnr: number | null;
+  /**
+   * Cosine similarity between original and adversarial FaceNet embeddings.
+   * Range [-1.0, 1.0]. Near 1.0 = same identity (weak protection); ≤ 0.5 = strong protection.
+   */
+  cosine_similarity: number;
+  /**
+   * Estimated probability (0–100 %) that an AI will still identify the face.
+   * 0 % = fully protected; 100 % = unprotected.
+   */
+  detection_probability: number;
 }
 
 /** Success response from POST /api/v1/cloak */
